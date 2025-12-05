@@ -3,11 +3,16 @@
 // ============================
 const express = require("express");
 const cors = require("cors");
-const multer = require("multer");   // ← QUAN TRỌNG: phải có
+const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-const uploadToDrive = require("./googleDrive"); // file anh đã có
+const uploadToDrive = require("./googleDrive");
+
+// ============================
+// GOOGLE DRIVE FOLDER ID
+// ============================
+const DRIVE_FOLDER_ID = "1nlzQwN3kZ9DwtkQnPwU_-f4mC7qE8bnm";
 
 const app = express();
 app.use(cors());
@@ -19,7 +24,7 @@ if (!fs.existsSync("uploads")) {
 }
 
 // ============================
-// MULTER STORAGE (LƯU FILE TẠM TRÊN SERVER)
+// MULTER STORAGE
 // ============================
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -31,12 +36,9 @@ const storage = multer.diskStorage({
     }
 });
 
-// ============================
-// 5MB LIMIT CHUẨN RAILWAY
-// ============================
 const uploadImage = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+    limits: { fileSize: 5 * 1024 * 1024 }
 }).single("image");
 
 // ============================
@@ -55,20 +57,22 @@ app.post("/upload-image", (req, res) => {
         }
 
         try {
-            const file = req.file;
+            console.log("📥 File received:", req.file);
 
-            // Upload lên Google Drive
-            const result = await uploadToDrive(file.path, file.originalname);
+            const filePath = req.file.path;
 
-            // Trả kết quả cho Flutter
+            // Upload lên Google Drive (dùng folderId đúng)
+            const result = await uploadToDrive(filePath, DRIVE_FOLDER_ID);
+
             return res.json({
                 status: "OK",
                 driveId: result.id,
-                driveName: result.name
+                driveName: result.name,
+                link: result.webViewLink
             });
 
         } catch (e) {
-            console.error(e);
+            console.error("❌ Upload to Drive Error:", e);
             return res.status(500).json({ status: "ERROR", message: e.message });
         }
     });
@@ -82,7 +86,7 @@ app.get("/", (req, res) => {
 });
 
 // ============================
-// START SERVER (Railway cấp PORT)
+// START SERVER
 // ============================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
