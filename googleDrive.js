@@ -3,7 +3,20 @@ const fs = require("fs");
 const path = require("path");
 
 // Load Google credential từ ENV (Railway Variables)
-const serviceAccount = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+let raw = process.env.GOOGLE_CREDENTIALS;
+
+if (!raw) {
+    throw new Error("GOOGLE_CREDENTIALS is empty or undefined!");
+}
+
+raw = raw.trim();
+
+// Xóa ký tự '=' hoặc ký tự BOM đầu nếu có
+while (raw.startsWith("=") || raw.startsWith("\uFEFF")) {
+    raw = raw.substring(1).trim();
+}
+
+const serviceAccount = JSON.parse(raw);
 
 // AUTH chuẩn cho Railway
 const auth = new google.auth.GoogleAuth({
@@ -18,7 +31,7 @@ async function uploadToDrive(localFilePath, folderId) {
 
     const fileMetadata = {
         name: fileName,
-        parents: [folderId], // mặc định folderId của anh
+        parents: [folderId],
     };
 
     const media = {
@@ -35,3 +48,5 @@ async function uploadToDrive(localFilePath, folderId) {
 }
 
 module.exports = uploadToDrive;
+
+console.log("ENV First Char:", process.env.GOOGLE_CREDENTIALS?.[0]);
