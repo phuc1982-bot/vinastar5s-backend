@@ -2,7 +2,6 @@ const { google } = require("googleapis");
 const fs = require("fs");
 const path = require("path");
 
-// Load Google credential từ ENV (Railway Variables)
 let raw = process.env.GOOGLE_CREDENTIALS;
 
 if (!raw) {
@@ -11,20 +10,17 @@ if (!raw) {
 
 raw = raw.trim();
 
-// Xóa ký tự '=' hoặc ký tự BOM đầu nếu có
 while (raw.startsWith("=") || raw.startsWith("\uFEFF")) {
     raw = raw.substring(1).trim();
 }
 
 const serviceAccount = JSON.parse(raw);
 
-// AUTH chuẩn cho Railway
 const auth = new google.auth.GoogleAuth({
     credentials: serviceAccount,
     scopes: ["https://www.googleapis.com/auth/drive.file"],
 });
 
-// Upload file lên Google Drive
 async function uploadToDrive(localFilePath, folderId) {
     const drive = google.drive({ version: "v3", auth });
     const fileName = path.basename(localFilePath);
@@ -32,9 +28,11 @@ async function uploadToDrive(localFilePath, folderId) {
     const fileMetadata = {
         name: fileName,
         parents: [folderId],
+        mimeType: "image/jpeg"
     };
 
     const media = {
+        mimeType: "image/jpeg",
         body: fs.createReadStream(localFilePath),
     };
 
