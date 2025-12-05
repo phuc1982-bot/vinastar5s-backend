@@ -1,128 +1,39 @@
-const express = require("express");
-const cors = require("cors");
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-const { google } = require("googleapis");
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.use(cors());
-app.use(express.json());
-
 // ============================
-// 1) GOOGLE DRIVE SETUP
+// 5) UPLOAD ẢNH (ĐÃ FIX CHUẨN RAILWAY)
 // ============================
 
-// Load JSON credentials
-const KEYFILEPATH = path.join(__dirname, "vinastar5s-c1f99c09db3f.json");
+// Giới hạn 5MB / ảnh để Railway không kill process
+const uploadImage = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+}).single("image");
 
-// Tạo OAuth2 client
-const auth = new google.auth.GoogleAuth({
-    keyFile: KEYFILEPATH,
-    scopes: ["https://www.googleapis.com/auth/drive.file"]
-});
+app.post("/upload-image", (req, res) => {
+    uploadImage(req, res, async function (err) {
+        if (err instanceof multer.MulterError) {
+            return res.status(400).json({ status: "ERROR", message: err.message });
+        } else if (err) {
+            return res.status(500).json({ status: "ERROR", message: err.message });
+        }
 
-const drive = google.drive({ version: "v3", auth });
+        if (!req.file) {
+            return res.status(400).json({ status: "ERROR", message: "Không nhận được file" });
+        }
 
-// ID thư mục Drive (folder anh gửi)
-const DRIVE_FOLDER_ID = "1nlzQwN3kZ9DwtkQnPwU_-f4mC7qE8bnm";
+        try {
+            const file = req.file;
 
-// Hàm upload lên Drive
-async function uploadToDrive(localPath, originalName) {
-    const fileMeta = {
-        name: originalName,
-        parents: [DRIVE_FOLDER_ID]
-    };
+            const result = await uploadToDrive(file.path, file.originalname);
 
-    const media = {
-        mimeType: "application/octet-stream",
-        body: fs.createReadStream(localPath)
-    };
+            res.json({
+                status: "OK",
+                driveId: result.id,
+                driveName: result.name
+            });
 
-    const response = await drive.files.create({
-        resource: fileMeta,
-        media: media,
-        fields: "id, name"
+        } catch (e) {
+            console.error(e);
+            res.status(500).json({ status: "ERROR", message: e.message });
+        }
     });
-
-    return response.data;
-}
-
-// ============================
-// 2) LOCAL UPLOAD FOLDER SETUP
-// ============================
-
-if (!fs.existsSync("uploads")) {
-    fs.mkdirSync("uploads");
-}
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, "uploads");
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + "-" + file.originalname);
-    }
-});
-
-const upload = multer({ storage });
-
-// ============================
-// 3) API TEST
-// ============================
-
-app.get("/", (req, res) => {
-    res.send("Vinastar 5S Backend đang chạy + Google Drive OK!");
-});
-
-// ============================
-// 4) UPLOAD EXCEL
-// ============================
-
-app.post("/upload-excel", upload.single("excel"), async (req, res) => {
-    try {
-        const file = req.file;
-
-        const result = await uploadToDrive(file.path, file.originalname);
-
-        res.json({
-            status: "OK",
-            driveId: result.id,
-            driveName: result.name
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: "ERROR", message: err.message });
-    }
-});
-
-// ============================
-// 5) UPLOAD ẢNH
-// ============================
-
-app.post("/upload-image", upload.single("image"), async (req, res) => {
-    try {
-        const file = req.file;
-
-        const result = await uploadToDrive(file.path, file.originalname);
-
-        res.json({
-            status: "OK",
-            driveId: result.id,
-            driveName: result.name
-        });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ status: "ERROR", message: err.message });
-    }
-});
-
-// ============================
-// 6) START SERVER
-// ============================
-
-app.listen(port, () => {
-    console.log("🚀 Backend Vinastar 5S chạy tại port " + port);
 });
