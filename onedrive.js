@@ -1,10 +1,19 @@
 const fs = require("fs");
 const axios = require("axios");
+const path = require("path"); // <-- QUAN TRỌNG
 
-// Lấy ENV + sửa lỗi tự động thêm "="
-const CLIENT_ID = (process.env.CLIENT_ID || "").replace(/^=/, "").trim();
-const CLIENT_SECRET = (process.env.CLIENT_SECRET || "").replace(/^=/, "").trim();
-const TENANT_ID = (process.env.TENANT_ID || "").replace(/^=/, "").trim();
+// Lấy ENV + loại bỏ toàn bộ ký tự lạ
+function cleanEnv(v) {
+    if (!v) return "";
+    return v
+        .replace(/=/g, "")     // bỏ mọi dấu =
+        .replace(/\s+/g, "")   // bỏ khoảng trắng, xuống dòng
+        .trim();
+}
+
+const CLIENT_ID = cleanEnv(process.env.CLIENT_ID);
+const CLIENT_SECRET = cleanEnv(process.env.CLIENT_SECRET);
+const TENANT_ID = cleanEnv(process.env.TENANT_ID);
 
 console.log("ENV CHECK =>", { CLIENT_ID, CLIENT_SECRET, TENANT_ID });
 
