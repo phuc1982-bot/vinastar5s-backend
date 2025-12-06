@@ -7,18 +7,15 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-const uploadToDrive = require("./googleDrive");
+const uploadToOneDrive = require("./onedrive");
 
 // ============================
-// GOOGLE DRIVE FOLDER ID
+// APP CONFIG
 // ============================
-const DRIVE_FOLDER_ID = "1nlzQwN3kZ9DwtkQnPwU_-f4mC7qE8bnm";
-
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Ensure uploads folder exists
 if (!fs.existsSync("uploads")) {
     fs.mkdirSync("uploads");
 }
@@ -42,7 +39,7 @@ const uploadImage = multer({
 }).single("image");
 
 // ============================
-// API UPLOAD ẢNH
+// API UPLOAD ẢNH → ONEDRIVE
 // ============================
 app.post("/upload-image", (req, res) => {
     uploadImage(req, res, async function (err) {
@@ -61,18 +58,18 @@ app.post("/upload-image", (req, res) => {
 
             const filePath = req.file.path;
 
-            // Upload lên Google Drive (dùng folderId đúng)
-            const result = await uploadToDrive(filePath, DRIVE_FOLDER_ID);
+            // Upload lên thư mục OneDrive: /5S/
+            const result = await uploadToOneDrive(filePath, "5S");
 
             return res.json({
                 status: "OK",
-                driveId: result.id,
-                driveName: result.name,
-                link: result.webViewLink
+                id: result.id,
+                name: result.name,
+                link: result.webUrl
             });
 
         } catch (e) {
-            console.error("❌ Upload to Drive Error:", e);
+            console.error("❌ Upload to OneDrive Error:", e);
             return res.status(500).json({ status: "ERROR", message: e.message });
         }
     });
@@ -82,7 +79,7 @@ app.post("/upload-image", (req, res) => {
 // API TEST
 // ============================
 app.get("/", (req, res) => {
-    res.send("Railway backend is running!");
+    res.send("Railway backend is running with OneDrive!");
 });
 
 // ============================
